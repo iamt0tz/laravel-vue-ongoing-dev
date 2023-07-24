@@ -17,6 +17,7 @@ class UserController extends Controller
                 'id' => $user->id,
                 'name'=> $user->name,
                 'email' => $user->email,
+                'role' => $user->role,
                 'created_at' => $user->created_at ->format('m-d-Y'),
                 // 'created_at' => $user->created_at ->format(config('app.date_format')),
             ];
