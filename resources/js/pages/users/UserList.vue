@@ -1,26 +1,29 @@
 <script setup>  
 import axios from 'axios';
-import {ref, onMounted, reactive } from 'vue';
+import {ref, onMounted, reactive, watch } from 'vue';
 import {Form, Field, useResetForm } from 'vee-validate';
 import * as yup from 'yup';
 import {useToastr} from '../../toastr.js';
-import UserListItem from './UserListItem.vue';
+import UserListItem from './UserListItem.vue'; 
+import { Bootstrap4Pagination } from 'laravel-vue-pagination';
 
 const toastr = useToastr();
-const users = ref([]);
+const users = ref({'data': []});
 const editing = ref(false);
 const formValues =ref();
 const form = ref(null);
 
+
  
 
-const getUsers = () =>{
-    axios.get('/api/users')
+const getUsers = (page = 1) =>{
+    axios.get(`/api/users?page=${page}`)
     .then((response) => {
         users.value = response.data;
     })
 
 };
+
 const createUserSchema = yup.object ({
   name: yup.string().required(),
   email: yup.string().email().required(),
@@ -94,6 +97,30 @@ const handleSubmit = (values, actions) =>{
   }
 }  
 
+const userDeleted = (userId)=>{
+  users.value = users.value.filter(user=>user.id !== userId);
+};
+
+const searchQuery = ref(null);
+const search = () =>
+{
+  axios.get('/api/users/search',{
+    params: {
+      query: searchQuery.value
+    }
+  })
+  .then(response => {
+    users.value =  response.data;
+  })
+  .catch(error => {
+    console.log(error);
+  })
+};
+
+watch(searchQuery,  () =>{
+  search();
+});
+
 onMounted(()=>{
     getUsers(); 
 });
@@ -125,11 +152,17 @@ onMounted(()=>{
 
     <!-- Main content -->
     <div class="content">
-      <div class="container-fluid">
-        
+      <div class="container-fluid"> 
+        <div class="d-flex justify-content-between">
+          
         <button @click="addUser" type="button" class="btn btn-primary p-2 m-2"  >
                         Add New User
                     </button>
+                    <div>
+                      <input type="text" v-model="searchQuery" class="form-control" placeholder="Search..." />
+                      
+                    </div>
+        </div>
         <div class="table-responsive">
                   <table class="table m-0">
                     <thead>
@@ -142,14 +175,27 @@ onMounted(()=>{
                       <th>Options</th>
                     </tr>
                     </thead>
-                    <tbody> 
-                        <UserListItem  v-for="(user, index) in users" 
+                    <tbody v-if="users.data.length >0"> 
+                        <UserListItem  v-for="(user, index) in users.data" 
                         :key="user.id"
                         :user=user
                         :index=index
+                        @edit-user="editUser"
+                        @user-deleted ="userDeleted"
+                        
                         />
                     </tbody>
+                    <tbody v-else >
+                      <tr>
+                        <td colspan="6" class="text-center">No results found.... </td>
+                      </tr>
+                    </tbody>
                   </table>
+
+                  <Bootstrap4Pagination
+                :data="users"
+                  @pagination-change-page="getUsers"
+              />
                 </div>
                 <!-- /.table-responsive -->
  
